@@ -87,7 +87,7 @@ async function upsertArticle(slug, title, url, flair_id, flair_text) {
   }
 }
 
-async function updateHealthCheck() {
+async function updateHealthCheck(status, lastError) {
   await fetch(
     `${SUPABASE_URL}/rest/v1/latest_articles`,
     {
@@ -104,6 +104,8 @@ async function updateHealthCheck() {
         url: 'health',
         flair_id: '',
         flair_text: '',
+        status: status,
+        last_error: lastError,
         detected_at: new Date().toISOString(),
       }),
     }
@@ -114,6 +116,7 @@ async function run() {
   console.log(`Scraper started at ${new Date().toISOString()}`);
 
   let anyError = false;
+  let lastErrorMessage = '';
 
   for (const topic of TOPICS) {
     console.log(`\nChecking: ${topic.slug}`);
@@ -142,7 +145,8 @@ async function run() {
 
     } catch (err) {
       anyError = true;
-      console.error(`ERROR [${topic.slug}]: ${err.message}`);
+      lastErrorMessage = `[${topic.slug}]: ${err.message}`;
+      console.error(`ERROR ${lastErrorMessage}`);
 
       if (err.message.startsWith('PARSE_ERROR')) {
         console.error(`ACTION REQUIRED: The Melbourne Storm website structure may have changed.`);
@@ -155,17 +159,22 @@ async function run() {
     }
   }
 
-  try {
-    await updateHealthCheck();
-    console.log(`\nHealth check timestamp updated`);
-  } catch (err) {
-    console.error(`Health check update failed: ${err.message}`);
-  }
-
   if (anyError) {
+    try {
+      await updateHealthCheck('0', lastErrorMessage);
+      console.log(`\nHealth check updated with error status`);
+    } catch (err) {
+      console.error(`Health check update failed: ${err.message}`);
+    }
     console.error(`\nScraper finished WITH ERRORS`);
     process.exit(1);
   } else {
+    try {
+      await updateHealthCheck('1', '');
+      console.log(`\nHealth check timestamp updated`);
+    } catch (err) {
+      console.error(`Health check update failed: ${err.message}`);
+    }
     console.log(`\nScraper finished successfully`);
   }
 }
