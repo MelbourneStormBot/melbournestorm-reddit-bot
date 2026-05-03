@@ -88,28 +88,27 @@ async function upsertArticle(slug, title, url, flair_id, flair_text) {
 }
 
 async function updateHealthCheck(status, lastError) {
-  await fetch(
-    `${SUPABASE_URL}/rest/v1/latest_articles`,
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/latest_articles?topic=eq._health`,
     {
-      method: 'POST',
+      method: 'PATCH',
       headers: {
         'apikey': SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates',
       },
       body: JSON.stringify({
-        topic: '_health',
-        title: 'health check',
-        url: 'health',
-        flair_id: '',
-        flair_text: '',
         status: status,
         last_error: lastError,
         detected_at: new Date().toISOString(),
       }),
     }
   );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HEALTH_ERROR:${error}`);
+  }
 }
 
 async function run() {
