@@ -4,7 +4,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const TOPICS = [
   {
     slug: 'team-lists',
-    url: 'https://www.melbournestorm.com.au/news/topic/team-lists-BROKEN/',
+    url: 'https://www.melbournestorm.com.au/news/topic/team-lists/',
     ariaPrefix: 'Team Lists Article - ',
     flair_id: '82219f50-3670-11f1-ac72-c22170d0e125',
     flair_text: 'Team List',
