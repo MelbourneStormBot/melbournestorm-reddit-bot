@@ -52,15 +52,6 @@ async function editMessage(messageId, content) {
   });
 }
 
-async function updateDiscord(messageId, data) {
-  const content = JSON.stringify(data);
-  if (messageId) {
-    await editMessage(messageId, content);
-  } else {
-    await createAndPinMessage(content);
-  }
-}
-
 async function fetchLatestArticle(topic) {
   const response = await fetch(topic.url, {
     headers: {
@@ -98,6 +89,7 @@ async function run() {
 
   let anyError = false;
   let lastErrorMessage = '';
+  let articleUpdated = false;
 
   // Get existing pinned message once at the start
   let pinnedMessage = null;
@@ -113,7 +105,6 @@ async function run() {
     }
   } catch (err) {
     console.error(`Failed to read pinned message: ${err.message}`);
-    // Continue anyway — we'll try to create a new one
   }
 
   for (const topic of TOPICS) {
@@ -144,7 +135,15 @@ async function run() {
         last_error: '',
       };
 
-      await updateDiscord(pinnedMessage ? pinnedMessage.id : null, newData);
+      if (pinnedMessage) {
+        await editMessage(pinnedMessage.id, JSON.stringify(newData));
+        pinnedMessage = { ...pinnedMessage, content: JSON.stringify(newData) };
+      } else {
+        pinnedMessage = await createAndPinMessage(JSON.stringify(newData));
+      }
+
+      pinnedData = newData;
+      articleUpdated = true;
       console.log(`Discord updated successfully`);
 
     } catch (err) {
@@ -163,36 +162,38 @@ async function run() {
     }
   }
 
-  // Always update health check in Discord
-  try {
-    const healthData = {
-      topic: anyError ? '_health_error' : '_health_ok',
-      title: 'health check',
-      url: 'health',
-      flair_id: '',
-      flair_text: '',
-      detected_at: new Date().toISOString(),
-      status: anyError ? '0' : '1',
-      last_error: anyError ? lastErrorMessage : '',
-    };
-
-    // Only update pinned message health if no article update happened
-    // Health is embedded in the article data when an article is updated
-    if (pinnedMessage && pinnedData) {
-      const updatedData = {
-        ...pinnedData,
-        detected_at: new Date().toISOString(),
-        status: anyError ? '0' : '1',
-        last_error: anyError ? lastErrorMessage : '',
-      };
-      await editMessage(pinnedMessage.id, JSON.stringify(updatedData));
-      console.log(`\nHealth check updated in Discord: status=${updatedData.status}`);
-    } else if (!pinnedMessage) {
-      await createAndPinMessage(JSON.stringify(healthData));
-      console.log(`\nCreated initial pinned message with health check`);
+  // Update health status on the single pinned message
+  // If article was already updated above, health is already embedded
+  // If no article update happened, we still need to update the health fields
+  if (!articleUpdated) {
+    try {
+      if (pinnedMessage && pinnedData) {
+        const updatedData = {
+          ...pinnedData,
+          detected_at: new Date().toISOString(),
+          status: anyError ? '0' : '1',
+          last_error: anyError ? lastErrorMessage : '',
+        };
+        await editMessage(pinnedMessage.id, JSON.stringify(updatedData));
+        console.log(`\nHealth check updated: status=${updatedData.status}`);
+      } else {
+        // No pinned message exists at all — create one with health data only
+        const healthData = {
+          topic: '_health',
+          title: 'health check',
+          url: 'health',
+          flair_id: '',
+          flair_text: '',
+          detected_at: new Date().toISOString(),
+          status: anyError ? '0' : '1',
+          last_error: anyError ? lastErrorMessage : '',
+        };
+        pinnedMessage = await createAndPinMessage(JSON.stringify(healthData));
+        console.log(`\nCreated initial pinned message with health status`);
+      }
+    } catch (err) {
+      console.error(`Health check update failed: ${err.message}`);
     }
-  } catch (err) {
-    console.error(`Health check update failed: ${err.message}`);
   }
 
   if (anyError) {
