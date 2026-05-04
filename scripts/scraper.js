@@ -1,5 +1,5 @@
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
 const TOPICS = [
   {
@@ -10,6 +10,56 @@ const TOPICS = [
     flair_text: 'Team List',
   },
 ];
+
+const DISCORD_API = 'https://discord.com/api/v10';
+
+async function discordRequest(method, path, body) {
+  const response = await fetch(`${DISCORD_API}${path}`, {
+    method,
+    headers: {
+      'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`DISCORD_ERROR:${response.status}:${error}`);
+  }
+
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function getPinnedMessage() {
+  const pins = await discordRequest('GET', `/channels/${DISCORD_CHANNEL_ID}/pins`);
+  if (!pins || pins.length === 0) return null;
+  return pins[0];
+}
+
+async function createAndPinMessage(content) {
+  const message = await discordRequest('POST', `/channels/${DISCORD_CHANNEL_ID}/messages`, {
+    content,
+  });
+  await discordRequest('PUT', `/channels/${DISCORD_CHANNEL_ID}/pins/${message.id}`);
+  return message;
+}
+
+async function editMessage(messageId, content) {
+  return await discordRequest('PATCH', `/channels/${DISCORD_CHANNEL_ID}/messages/${messageId}`, {
+    content,
+  });
+}
+
+async function updateDiscord(messageId, data) {
+  const content = JSON.stringify(data);
+  if (messageId) {
+    await editMessage(messageId, content);
+  } else {
+    await createAndPinMessage(content);
+  }
+}
 
 async function fetchLatestArticle(topic) {
   const response = await fetch(topic.url, {
@@ -43,79 +93,28 @@ async function fetchLatestArticle(topic) {
   return { title, url };
 }
 
-async function getStoredData(slug) {
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/latest_articles?topic=eq.${slug}&select=url`,
-    {
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-    }
-  );
-
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data.length > 0 ? data[0].url : null;
-}
-
-async function upsertArticle(slug, title, url, flair_id, flair_text) {
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/latest_articles`,
-    {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates',
-      },
-      body: JSON.stringify({
-        topic: slug,
-        title,
-        url,
-        flair_id,
-        flair_text,
-        detected_at: new Date().toISOString(),
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`SUPABASE_ERROR:${error}`);
-  }
-}
-
-async function updateHealthCheck(status, lastError) {
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/latest_articles?topic=eq._health`,
-    {
-      method: 'PATCH',
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        status: status,
-        last_error: lastError,
-        detected_at: new Date().toISOString(),
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`HEALTH_ERROR:${error}`);
-  }
-}
-
 async function run() {
   console.log(`Scraper started at ${new Date().toISOString()}`);
 
   let anyError = false;
   let lastErrorMessage = '';
+
+  // Get existing pinned message once at the start
+  let pinnedMessage = null;
+  let pinnedData = null;
+
+  try {
+    pinnedMessage = await getPinnedMessage();
+    if (pinnedMessage) {
+      pinnedData = JSON.parse(pinnedMessage.content);
+      console.log(`Found pinned message, stored URL: ${pinnedData.url}`);
+    } else {
+      console.log(`No pinned message found — will create one`);
+    }
+  } catch (err) {
+    console.error(`Failed to read pinned message: ${err.message}`);
+    // Continue anyway — we'll try to create a new one
+  }
 
   for (const topic of TOPICS) {
     console.log(`\nChecking: ${topic.slug}`);
@@ -124,7 +123,7 @@ async function run() {
       const latest = await fetchLatestArticle(topic);
       console.log(`Latest article: "${latest.title}" — ${latest.url}`);
 
-      const storedUrl = await getStoredData(topic.slug);
+      const storedUrl = pinnedData ? pinnedData.url : null;
       console.log(`Stored URL: ${storedUrl}`);
 
       if (latest.url === storedUrl) {
@@ -132,15 +131,21 @@ async function run() {
         continue;
       }
 
-      console.log(`New article detected — updating Supabase`);
-      await upsertArticle(
-        topic.slug,
-        latest.title,
-        latest.url,
-        topic.flair_id,
-        topic.flair_text
-      );
-      console.log(`Supabase updated successfully`);
+      console.log(`New article detected — updating Discord`);
+
+      const newData = {
+        topic: topic.slug,
+        title: latest.title,
+        url: latest.url,
+        flair_id: topic.flair_id,
+        flair_text: topic.flair_text,
+        detected_at: new Date().toISOString(),
+        status: '1',
+        last_error: '',
+      };
+
+      await updateDiscord(pinnedMessage ? pinnedMessage.id : null, newData);
+      console.log(`Discord updated successfully`);
 
     } catch (err) {
       anyError = true;
@@ -152,28 +157,48 @@ async function run() {
         console.error(`Check ${topic.url} and update the scraper if needed.`);
       } else if (err.message.startsWith('HTTP_ERROR')) {
         console.error(`The Melbourne Storm website returned an error. May be temporary.`);
-      } else if (err.message.startsWith('SUPABASE_ERROR')) {
-        console.error(`Supabase write failed. Check your secrets are correct.`);
+      } else if (err.message.startsWith('DISCORD_ERROR')) {
+        console.error(`Discord API call failed. Check DISCORD_BOT_TOKEN and DISCORD_CHANNEL_ID secrets.`);
       }
     }
   }
 
-  if (anyError) {
-    try {
-      await updateHealthCheck('0', lastErrorMessage);
-      console.log(`\nHealth check updated with error status`);
-    } catch (err) {
-      console.error(`Health check update failed: ${err.message}`);
+  // Always update health check in Discord
+  try {
+    const healthData = {
+      topic: anyError ? '_health_error' : '_health_ok',
+      title: 'health check',
+      url: 'health',
+      flair_id: '',
+      flair_text: '',
+      detected_at: new Date().toISOString(),
+      status: anyError ? '0' : '1',
+      last_error: anyError ? lastErrorMessage : '',
+    };
+
+    // Only update pinned message health if no article update happened
+    // Health is embedded in the article data when an article is updated
+    if (pinnedMessage && pinnedData) {
+      const updatedData = {
+        ...pinnedData,
+        detected_at: new Date().toISOString(),
+        status: anyError ? '0' : '1',
+        last_error: anyError ? lastErrorMessage : '',
+      };
+      await editMessage(pinnedMessage.id, JSON.stringify(updatedData));
+      console.log(`\nHealth check updated in Discord: status=${updatedData.status}`);
+    } else if (!pinnedMessage) {
+      await createAndPinMessage(JSON.stringify(healthData));
+      console.log(`\nCreated initial pinned message with health check`);
     }
+  } catch (err) {
+    console.error(`Health check update failed: ${err.message}`);
+  }
+
+  if (anyError) {
     console.error(`\nScraper finished WITH ERRORS`);
     process.exit(1);
   } else {
-    try {
-      await updateHealthCheck('1', '');
-      console.log(`\nHealth check timestamp updated`);
-    } catch (err) {
-      console.error(`Health check update failed: ${err.message}`);
-    }
     console.log(`\nScraper finished successfully`);
   }
 }
