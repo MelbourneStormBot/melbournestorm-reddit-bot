@@ -12,9 +12,13 @@ const TOPICS = [
 ];
 
 const DISCORD_API = 'https://discord.com/api/v10';
+const fs = await import('fs');
+const path = await import('path');
 
-async function discordRequest(method, path, body) {
-  const response = await fetch(`${DISCORD_API}${path}`, {
+const LOG_FILE = path.join(process.cwd(), 'logs', 'article-history.md');
+
+async function discordRequest(method, endpoint, body) {
+  const response = await fetch(`${DISCORD_API}${endpoint}`, {
     method,
     headers: {
       'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
@@ -76,12 +80,40 @@ async function fetchLatestArticle(topic) {
   }
 
   const title = match[1].trim();
-  const path = match[2].trim();
-  const url = path.startsWith('http')
-    ? path
-    : `https://www.melbournestorm.com.au${path}`;
+  const path2 = match[2].trim();
+  const url = path2.startsWith('http')
+    ? path2
+    : `https://www.melbournestorm.com.au${path2}`;
 
   return { title, url };
+}
+
+async function appendToLog(topic, title, url) {
+  try {
+    const dir = path.dirname(LOG_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString();
+    const entry = `| ${timestamp} | ${topic} | ${title} | ${url} |\n`;
+
+    if (!fs.existsSync(LOG_FILE)) {
+      const header = `# Melbourne Storm Article History\n\nAutomatically updated by MelbourneStormBot when new articles are detected.\n\n| Detected At | Topic | Title | URL |\n|---|---|---|---|\n`;
+      fs.writeFileSync(LOG_FILE, header);
+    }
+
+    fs.appendFileSync(LOG_FILE, entry);
+    console.log(`Log file updated: ${title}`);
+
+    // Signal to the workflow that a commit is needed
+    const outputFile = process.env.GITHUB_OUTPUT;
+    if (outputFile) {
+      fs.appendFileSync(outputFile, `article_detected=true\n`);
+    }
+  } catch (err) {
+    console.error(`Failed to update log file: ${err.message}`);
+  }
 }
 
 async function run() {
@@ -91,7 +123,6 @@ async function run() {
   let lastErrorMessage = '';
   let articleUpdated = false;
 
-  // Get existing pinned message once at the start
   let pinnedMessage = null;
   let pinnedData = null;
 
@@ -146,6 +177,8 @@ async function run() {
       articleUpdated = true;
       console.log(`Discord updated successfully`);
 
+      await appendToLog(topic.slug, latest.title, latest.url);
+
     } catch (err) {
       anyError = true;
       lastErrorMessage = `[${topic.slug}]: ${err.message}`;
@@ -162,9 +195,6 @@ async function run() {
     }
   }
 
-  // Update health status on the single pinned message
-  // If article was already updated above, health is already embedded
-  // If no article update happened, we still need to update the health fields
   if (!articleUpdated) {
     try {
       if (pinnedMessage && pinnedData) {
@@ -177,7 +207,6 @@ async function run() {
         await editMessage(pinnedMessage.id, JSON.stringify(updatedData));
         console.log(`\nHealth check updated: status=${updatedData.status}`);
       } else {
-        // No pinned message exists at all — create one with health data only
         const healthData = {
           topic: '_health',
           title: 'health check',
