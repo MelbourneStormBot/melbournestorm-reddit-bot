@@ -2,11 +2,13 @@
 
 Automatically detects new articles on the Melbourne Storm website and posts them to [r/melbournestorm](https://www.reddit.com/r/melbournestorm/) with the correct flair.
 
+<!-- keep alive -->
+
 ---
 
 ## What It Does
 
-A GitHub Actions workflow scrapes the Melbourne Storm news website on a schedule. When a new article is detected, it writes the article details to a Supabase database. A Devvit app installed on r/melbournestorm polls that database and automatically creates a link post with the correct flair.
+A GitHub Actions workflow scrapes the Melbourne Storm news website on a schedule. When a new article is detected, it writes the article details to a pinned message in a private Discord channel. A Devvit app installed on r/melbournestorm polls that Discord channel and automatically creates a link post with the correct flair.
 
 ---
 
@@ -17,14 +19,17 @@ Melbourne Storm website
         ↓
 GitHub Actions (scraper runs on schedule)
         ↓
-Supabase database (stores latest article per topic)
+Discord (pinned message stores latest article data)
         ↓
-Devvit app (polls Supabase, posts to Reddit)
+Devvit app (polls Discord, posts to Reddit)
         ↓
 r/melbournestorm (link post with flair)
 ```
 
-There is no direct connection between GitHub and Reddit. Supabase acts as the neutral middle layer because Devvit cannot fetch the Melbourne Storm website directly (not on Reddit's allow-list).
+There is no direct connection between GitHub and Reddit. Discord acts as the neutral middle layer because:
+- Devvit cannot fetch the Melbourne Storm website directly (not on Reddit's allow-list)
+- Discord (discord.com) is on Devvit's global fetch allow-list
+- Supabase is NOT on Devvit's global fetch allow-list and was therefore not used
 
 ---
 
@@ -35,9 +40,11 @@ All accounts use **MelbourneStormBot@proton.me** as the email address. Credentia
 | Service | Account | Purpose |
 |---|---|---|
 | GitHub | MelbourneStormBot | Hosts the scraper code and runs it on schedule |
-| Supabase | MelbourneStormBot@proton.me | Database storing latest article per topic |
+| Discord | MelbourneStormBot@proton.me | Stores latest article data as a pinned message |
 | Reddit | u/MelbourneStormBot | Mod account that installs and runs the Devvit app |
 | Proton Mail | MelbourneStormBot@proton.me | Receives error alert emails from GitHub |
+
+**Note:** A Supabase account also exists at MelbourneStormBot@proton.me but is no longer used by the bot. It was set up during development but abandoned when Supabase was found to be incompatible with Devvit's fetch allow-list.
 
 ---
 
@@ -48,7 +55,7 @@ melbournestorm-reddit-bot/
 ├── .github/
 │   └── workflows/
 │       ├── scraper-general.yml     # Runs every 15 min, all week
-│       └── scraper-tuesday.yml     # Runs every 5 min on Tuesdays 3-8pm AEST
+│       └── scraper-tuesday.yml     # Runs every 5 min on Tuesdays 3-8pm AEST/AEDT
 ├── scripts/
 │   └── scraper.js                  # The scraper script
 └── README.md
@@ -66,6 +73,8 @@ Two workflows run the scraper on different schedules.
 
 Both workflows use the same scraper script. The script itself handles the logic — the workflows just trigger it on schedule.
 
+**Note on scheduling:** GitHub does not guarantee exact cron timing on free accounts. Scheduled runs may be delayed by 15–30 minutes during busy periods. This is expected behaviour and not a bug.
+
 ---
 
 ## GitHub Secrets
@@ -74,46 +83,90 @@ The following secrets are stored in the repository under Settings → Secrets an
 
 | Secret name | What it is |
 |---|---|
-| `SUPABASE_URL` | `https://ohfhothimzcaevwolrms.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | The secret key allowing the scraper to write to Supabase |
-| `SUPABASE_ANON_KEY` | The publishable key used by Devvit to read from Supabase |
+| `DISCORD_BOT_TOKEN` | The bot token allowing the scraper to read and write to Discord |
+| `DISCORD_CHANNEL_ID` | The ID of the #article-feed channel in the MelbourneStormBot Discord server |
+| `SUPABASE_URL` | No longer used — kept for reference only |
+| `SUPABASE_SERVICE_ROLE_KEY` | No longer used — kept for reference only |
+| `SUPABASE_ANON_KEY` | No longer used — kept for reference only |
 
 ---
 
-## Supabase Database
+## Discord Setup
 
-**Project:** melbournestorm-reddit-bot
-**Region:** Oceania (Sydney)
-**URL:** https://ohfhothimzcaevwolrms.supabase.co
+**Server:** MelbourneStormBot's server (private, no public invite link)
+**Channel:** #article-feed
+**Channel ID:** 1500718194137239562
+**Bot:** MelbourneStormBot (APP)
 
-**Table:** `public.latest_articles`
+The bot stores all article data as a single pinned message in the #article-feed channel. There is always exactly one pinned message. The bot edits this message on every run — it never creates additional pinned messages.
 
-| Column | Type | Purpose |
-|---|---|---|
-| `id` | int8 | Auto-generated row ID |
-| `topic` | text (unique) | Topic slug e.g. `team-lists` |
-| `title` | text | Article title |
-| `url` | text | Full article URL |
-| `detected_at` | timestamptz | When the article was detected |
-| `flair_id` | text | Reddit flair UUID for this topic |
-| `flair_text` | text | Human-readable flair label |
-| `status` | text | `1` = last scraper run succeeded, `0` = failed |
-| `last_error` | text | Error message from last failed run, empty if OK |
+**Bot permissions:**
+- View Channels
+- Send Messages
+- Read Message History
+- Manage Messages
+- Pin Messages
 
-There will always be one row per topic plus one `_health` row. The table never grows beyond that.
+**To view the pinned message:** Open the #article-feed channel in Discord and click the pin icon in the top right, or scroll up to find the pinned message notification.
+
+---
+
+## Pinned Message Format
+
+The pinned message contains a single line of JSON with the following fields:
+
+```json
+{
+  "topic": "team-lists",
+  "title": "Late Mail: Round 9 v Dolphins",
+  "url": "https://www.melbournestorm.com.au/news/2026/05/01/late-mail-round-9-v-dolphins/",
+  "flair_id": "82219f50-3670-11f1-ac72-c22170d0e125",
+  "flair_text": "Team List",
+  "detected_at": "2026-05-04T05:21:23.229Z",
+  "status": "1",
+  "last_error": ""
+}
+```
+
+| Field | Purpose |
+|---|---|
+| `topic` | Topic slug identifying which news category this is |
+| `title` | Article title extracted from the Melbourne Storm website |
+| `url` | Full article URL |
+| `flair_id` | Reddit flair UUID to apply when posting |
+| `flair_text` | Human-readable flair label |
+| `detected_at` | Timestamp of when this run completed |
+| `status` | `1` = last scraper run succeeded, `0` = failed |
+| `last_error` | Error message from last failed run, empty if OK |
+
+**Note:** Discord renders URLs as clickable links which can make the JSON appear broken in the Discord interface. The underlying data is correct. Devvit reads the raw JSON string, not the rendered version.
 
 ---
 
 ## How the Scraper Works
 
 1. GitHub Actions triggers `scripts/scraper.js` on schedule
-2. For each topic in the `TOPICS` config, the script fetches the Melbourne Storm topic page
-3. It finds the first article card using the `aria-label` attribute (e.g. `"Team Lists Article - Late Mail: Round 9 v Dolphins..."`)
-4. It extracts the article title and URL from that card
-5. It reads the currently stored URL from Supabase for that topic
-6. If the URLs match — no change, script moves on
-7. If the URLs differ — new article detected, script writes the new article to Supabase
-8. At the end of every run, the script updates the `_health` row with a fresh timestamp and status
+2. The script reads the current pinned message from the Discord #article-feed channel
+3. For each topic in the `TOPICS` config, the script fetches the Melbourne Storm topic page
+4. It finds the first article card using the `aria-label` attribute (e.g. `"Team Lists Article - Late Mail: Round 9 v Dolphins..."`)
+5. It extracts the article title and URL from that card
+6. It compares the latest URL to the URL stored in the pinned message
+7. If the URLs match — no change, script updates the health fields only
+8. If the URLs differ — new article detected, script edits the pinned message with new article data
+9. At the end of every run, the health fields (`status` and `last_error`) are updated in the pinned message
+
+---
+
+## How Devvit Uses the Data
+
+Devvit polls the Discord channel on a schedule and follows this logic:
+
+1. Read the pinned message from #article-feed
+2. Parse the JSON
+3. Check `status` first — if `0`, send a modmail alert to r/melbournestorm mods and stop
+4. If `status` is `1`, compare the article URL to the last URL Devvit posted (stored in Devvit's KV store)
+5. If the URL is new — create a Reddit link post with the article title and URL, apply the flair
+6. If the URL is the same — do nothing
 
 ---
 
@@ -135,6 +188,8 @@ You will need to verify the correct `ariaPrefix` by viewing the page source of t
 
 You will also need to update the Devvit app to handle the new topic and flair. See the Devvit section of this README when that is documented.
 
+**Note on multiple topics:** The current pinned message format stores only one topic at a time. When multiple topics are added, the architecture will need to be reviewed — either one pinned message per topic (one channel per topic) or a different data structure. This will be addressed when the second topic is added.
+
 **Flair IDs for future topics:**
 
 | Topic | Flair ID |
@@ -149,12 +204,14 @@ You will also need to update the Devvit app to handle the new topic and flair. S
 
 **Email alerts:** GitHub automatically sends an email to MelbourneStormBot@proton.me when a workflow run fails. Check Proton Mail if you suspect something is wrong.
 
-**Supabase health check:** Go to the Supabase table editor and look at the `_health` row.
-- `detected_at` should be recent (within the last 15–20 minutes during the day)
+**Discord health check:** Open the #article-feed channel in the MelbourneStormBot Discord server and check the pinned message:
+- `detected_at` should be recent (within the last 20 minutes during the day)
 - `status` should be `1`
 - `last_error` should be empty
 
-If `status` is `0`, the `last_error` column will tell you what went wrong.
+If `status` is `0`, the `last_error` field will say what went wrong.
+
+**Devvit modmail alerts:** If the scraper is reporting errors, Devvit will automatically send a modmail to r/melbournestorm so all mods are notified.
 
 **GitHub Actions log:** Go to the repository on GitHub, click the Actions tab, and click on any workflow run to see the full log output.
 
@@ -163,19 +220,19 @@ If `status` is `0`, the `last_error` column will tell you what went wrong.
 ## Common Errors and Fixes
 
 **`HTTP_ERROR:404`**
-The Melbourne Storm website returned a page not found error. This is usually temporary. Wait for the next scheduled run. If it persists, check that the topic URL in `scraper.js` is correct.
+The Melbourne Storm website returned a page not found error. Usually temporary. Wait for the next scheduled run. If it persists, check that the topic URL in `scraper.js` is correct.
 
 **`PARSE_ERROR`**
 The scraper could not find an article card with the expected `aria-label` format. This means the Melbourne Storm website has changed its HTML structure. The scraper needs to be updated. See the "If the scraper breaks" section below.
 
-**`SUPABASE_ERROR`**
-The scraper could not write to Supabase. Check that the `SUPABASE_SERVICE_ROLE_KEY` secret in GitHub is still valid. You may need to regenerate the key in Supabase and update the secret.
+**`DISCORD_ERROR`**
+The scraper could not read from or write to Discord. Check that the `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` secrets in GitHub are correct. The bot token may need to be regenerated in the Discord Developer Portal at https://discord.com/developers/applications.
 
 ---
 
 ## If the Scraper Breaks
 
-If the Melbourne Storm website changes its structure and the scraper stops working and you can not update code yourself:
+If the Melbourne Storm website changes its structure and the scraper stops working:
 
 1. Go to the Melbourne Storm topic page in your browser (e.g. `https://www.melbournestorm.com.au/news/topic/team-lists/`)
 2. Right-click anywhere on the page and select "View Page Source"
@@ -199,11 +256,10 @@ To trigger the scraper manually without waiting for the schedule:
 5. Wait about 30 seconds and refresh the page
 6. A green tick means success, a red cross means failure
 7. Click into the run to see the full log
+8. Check the Discord #article-feed pinned message to verify data is correct
 
 ---
 
-## Supabase Free Tier Limits
+## Discord API Limits
 
-The free tier allows 50,000 database operations per month. Current estimated usage with one topic is approximately 14,000 per month (28% of limit). Each additional topic adds approximately 3,200 operations per month. The free tier should comfortably support up to 4 topics total.
-
-The free tier remains active as long as the project receives traffic. Since the scraper runs every 15 minutes, the project will never go idle.
+Discord allows 50 requests per second globally. The scraper makes 1-2 API calls per run (one GET to read the pinned message, one PATCH to update it). At 15-minute intervals this is approximately 3,000 calls per month — well within any reasonable limit.
