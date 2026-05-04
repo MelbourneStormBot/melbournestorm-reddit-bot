@@ -2,8 +2,6 @@
 
 Automatically detects new articles on the Melbourne Storm website and posts them to [r/melbournestorm](https://www.reddit.com/r/melbournestorm/) with the correct flair.
 
-<!-- keep alive -->
-
 ---
 
 ## What It Does
@@ -43,6 +41,7 @@ All accounts use **MelbourneStormBot@proton.me** as the email address. Credentia
 | Discord | MelbourneStormBot@proton.me | Stores latest article data as a pinned message |
 | Reddit | u/MelbourneStormBot | Mod account that installs and runs the Devvit app |
 | Proton Mail | MelbourneStormBot@proton.me | Receives error alert emails from GitHub |
+| cron-job.org | MelbourneStormBot@proton.me | Reliable external trigger for Tuesday 4pm precision window |
 
 **Note:** A Supabase account also exists at MelbourneStormBot@proton.me but is no longer used by the bot. It was set up during development but abandoned when Supabase was found to be incompatible with Devvit's fetch allow-list.
 
@@ -56,6 +55,8 @@ melbournestorm-reddit-bot/
 │   └── workflows/
 │       ├── scraper-general.yml     # Runs every 15 min, all week
 │       └── scraper-tuesday.yml     # Runs every 5 min on Tuesdays 3-8pm AEST/AEDT
+├── logs/
+│   └── article-history.md          # Historical record of all detected articles
 ├── scripts/
 │   └── scraper.js                  # The scraper script
 └── README.md
@@ -65,15 +66,13 @@ melbournestorm-reddit-bot/
 
 ## GitHub Actions Workflows
 
-Two workflows run the scraper on different schedules.
+Two workflows run on different schedules.
 
 **scraper-general.yml** — runs every 15 minutes, all day, every day. Catches general news updates, injuries, and other topics when expanded.
 
-**scraper-tuesday.yml** — runs every 5 minutes on Tuesdays only, during UTC hours 4–9. This covers 3pm–8pm in both AEST (UTC+10) and AEDT (UTC+11), ensuring the Tuesday 4pm team list announcement is caught quickly regardless of daylight saving.
+**scraper-tuesday.yml** — runs every 5 minutes on Tuesdays only, during UTC hours 4–9. This covers 3pm–8pm in both AEST (UTC+10) and AEDT (UTC+11). Note: this workflow is also triggered externally by cron-job.org for reliable 4pm precision — see the cron-job.org section below.
 
-Both workflows use the same scraper script. The script itself handles the logic — the workflows just trigger it on schedule.
-
-**Note on scheduling:** GitHub does not guarantee exact cron timing on free accounts. Scheduled runs may be delayed by 15–30 minutes during busy periods. This is expected behaviour and not a bug.
+**Note on scheduling:** GitHub does not guarantee exact cron timing on free accounts. Scheduled runs may be delayed by 15–30 minutes during busy periods. The Tuesday 4pm precision window is handled by cron-job.org rather than GitHub's own scheduler.
 
 ---
 
@@ -88,6 +87,32 @@ The following secrets are stored in the repository under Settings → Secrets an
 | `SUPABASE_URL` | No longer used — kept for reference only |
 | `SUPABASE_SERVICE_ROLE_KEY` | No longer used — kept for reference only |
 | `SUPABASE_ANON_KEY` | No longer used — kept for reference only |
+
+---
+
+## cron-job.org Setup
+
+GitHub Actions scheduled workflows are not reliable enough for the Tuesday 4pm team list requirement. cron-job.org is used as an external trigger to fire the Tuesday scraper at exactly the right time.
+
+**Account:** MelbourneStormBot@proton.me at https://cron-job.org
+
+**Job name:** Melbourne Storm Bot - Tuesday Trigger
+
+**Schedule:** Every minute from 4:00pm to 4:10pm, Tuesdays only (Australia/Sydney timezone)
+
+**What it does:** Sends a POST request to the GitHub API to trigger `scraper-tuesday.yml` via workflow_dispatch. The scraper then runs immediately on demand rather than waiting for GitHub's own scheduler.
+
+**GitHub Personal Access Token:** A token named `cron-job-trigger` is stored in the cron-job.org job headers as the Authorization Bearer token. This token has only the `workflow` scope. If it needs to be regenerated, go to https://github.com/settings/tokens, delete the old one, create a new classic token with the `workflow` scope, and update the Authorization header in the cron-job.org job settings.
+
+**cron-job.org request headers:**
+| Header | Value |
+|---|---|
+| `Accept` | `application/vnd.github+json` |
+| `Authorization` | `Bearer YOUR_GITHUB_TOKEN` |
+| `Content-Type` | `application/json` |
+| `X-GitHub-Api-Version` | `2026-03-10` |
+
+**Request body:** `{"ref":"main"}`
 
 ---
 
@@ -107,7 +132,9 @@ The bot stores all article data as a single pinned message in the #article-feed 
 - Manage Messages
 - Pin Messages
 
-**To view the pinned message:** Open the #article-feed channel in Discord and click the pin icon in the top right, or scroll up to find the pinned message notification.
+**To view the pinned message:** Open the #article-feed channel in Discord and click the pin icon in the top right.
+
+**Discord Developer Portal:** https://discord.com/developers/applications — log in as MelbourneStormBot to manage the bot token if needed.
 
 ---
 
@@ -143,17 +170,25 @@ The pinned message contains a single line of JSON with the following fields:
 
 ---
 
+## Article History Log
+
+Every time a new article is detected, the scraper appends a record to `logs/article-history.md` in this repository. This file serves as a permanent archive of every article the bot has ever detected, useful for debugging and auditing.
+
+The log is updated automatically — no manual action required. Each entry includes the detection timestamp, topic, article title, and URL.
+
+---
+
 ## How the Scraper Works
 
-1. GitHub Actions triggers `scripts/scraper.js` on schedule
+1. GitHub Actions triggers `scripts/scraper.js` on schedule (or via cron-job.org on Tuesdays)
 2. The script reads the current pinned message from the Discord #article-feed channel
 3. For each topic in the `TOPICS` config, the script fetches the Melbourne Storm topic page
-4. It finds the first article card using the `aria-label` attribute (e.g. `"Team Lists Article - Late Mail: Round 9 v Dolphins..."`)
+4. It finds the first article card using the `aria-label` attribute
 5. It extracts the article title and URL from that card
 6. It compares the latest URL to the URL stored in the pinned message
 7. If the URLs match — no change, script updates the health fields only
-8. If the URLs differ — new article detected, script edits the pinned message with new article data
-9. At the end of every run, the health fields (`status` and `last_error`) are updated in the pinned message
+8. If the URLs differ — new article detected, script edits the pinned message with new article data and appends to the article history log
+9. The workflow then commits the updated log file back to the repository
 
 ---
 
@@ -186,9 +221,9 @@ Open `scripts/scraper.js` and add a new entry to the `TOPICS` array:
 
 You will need to verify the correct `ariaPrefix` by viewing the page source of the topic page and finding the `aria-label` on the first article card. The prefix is everything before the article title in that label.
 
-You will also need to update the Devvit app to handle the new topic and flair. See the Devvit section of this README when that is documented.
+You will also need to update the Devvit app to handle the new topic and flair.
 
-**Note on multiple topics:** The current pinned message format stores only one topic at a time. When multiple topics are added, the architecture will need to be reviewed — either one pinned message per topic (one channel per topic) or a different data structure. This will be addressed when the second topic is added.
+**Note on multiple topics:** The current pinned message format stores only one topic at a time. When multiple topics are added, the architecture will need to be reviewed — either one pinned message per topic or a different data structure. This will be addressed when the second topic is added.
 
 **Flair IDs for future topics:**
 
@@ -202,14 +237,12 @@ You will also need to update the Devvit app to handle the new topic and flair. S
 
 ## Monitoring and Alerts
 
-**Email alerts:** GitHub automatically sends an email to MelbourneStormBot@proton.me when a workflow run fails. Check Proton Mail if you suspect something is wrong.
+**Email alerts:** GitHub automatically sends an email to MelbourneStormBot@proton.me when a workflow run fails.
 
-**Discord health check:** Open the #article-feed channel in the MelbourneStormBot Discord server and check the pinned message:
+**Discord health check:** Open the #article-feed channel and check the pinned message:
 - `detected_at` should be recent (within the last 20 minutes during the day)
 - `status` should be `1`
 - `last_error` should be empty
-
-If `status` is `0`, the `last_error` field will say what went wrong.
 
 **Devvit modmail alerts:** If the scraper is reporting errors, Devvit will automatically send a modmail to r/melbournestorm so all mods are notified.
 
@@ -226,11 +259,11 @@ The Melbourne Storm website returned a page not found error. Usually temporary. 
 The scraper could not find an article card with the expected `aria-label` format. This means the Melbourne Storm website has changed its HTML structure. The scraper needs to be updated. See the "If the scraper breaks" section below.
 
 **`DISCORD_ERROR`**
-The scraper could not read from or write to Discord. Check that the `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` secrets in GitHub are correct. The bot token may need to be regenerated in the Discord Developer Portal at https://discord.com/developers/applications.
+The scraper could not read from or write to Discord. Check that the `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` secrets in GitHub are correct. The bot token may need to be regenerated in the Discord Developer Portal.
 
 ---
 
-## If the Scraper Breaks
+## If the Scraper Breaks and You Don't Know What to do:
 
 If the Melbourne Storm website changes its structure and the scraper stops working:
 
@@ -262,4 +295,4 @@ To trigger the scraper manually without waiting for the schedule:
 
 ## Discord API Limits
 
-Discord allows 50 requests per second globally. The scraper makes 1-2 API calls per run (one GET to read the pinned message, one PATCH to update it). At 15-minute intervals this is approximately 3,000 calls per month — well within any reasonable limit.
+Discord allows 50 requests per second globally. The scraper makes 1-2 API calls per run. At 15-minute intervals this is approximately 3,000 calls per month — well within any reasonable limit.
