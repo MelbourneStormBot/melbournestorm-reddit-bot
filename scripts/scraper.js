@@ -4,7 +4,7 @@ const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 const TOPICS = [
   {
     slug: 'team-lists',
-    url: 'https://www.melbournestorm.com.au/news/topic/team-lists/',
+    url: 'https://www.melbournestorm.com.au/news/topic/team-lists-BROKEN/',
     ariaPrefix: 'Team Lists Article - ',
     flair_id: '82219f50-3670-11f1-ac72-c22170d0e125',
     flair_text: 'Team List',
