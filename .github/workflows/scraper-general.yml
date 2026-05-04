@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -18,7 +20,17 @@ jobs:
           node-version: '24'
 
       - name: Run scraper
+        id: scraper
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
         run: node scripts/scraper.js
+
+      - name: Commit article log if updated
+        if: steps.scraper.outputs.article_detected == 'true'
+        run: |
+          git config user.email "MelbourneStormBot@proton.me"
+          git config user.name "MelbourneStormBot"
+          git add logs/article-history.md
+          git commit -m "log: new article detected [$(date -u +%Y-%m-%d)]"
+          git push
