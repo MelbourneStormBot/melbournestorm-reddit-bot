@@ -4,7 +4,7 @@ const TOPICS = [
   {
     slug: 'team-lists',
     channelId: '1500718194137239562',
-    url: 'https://www.melbournestorm.com.au/news/topic/team-lists/',
+    url: 'https://www.melbournestorm.com.au/news/topic/team-lists-BROKEN/',
     ariaPrefix: 'Team Lists Article - ',
     flair_id: '82219f50-3670-11f1-ac72-c22170d0e125',
     flair_text: 'Team List',
@@ -12,7 +12,7 @@ const TOPICS = [
   {
     slug: 'injuries',
     channelId: '1501075944973008948',
-    url: 'https://www.melbournestorm.com.au/news/topic/injuries/',
+    url: 'https://www.melbournestorm.com.au/news/topic/injuries-BROKEN/',
     ariaPrefix: 'Injuries Article - ',
     flair_id: 'b44e515c-3671-11f1-a98e-de42d307c623',
     flair_text: 'Injuries',
