@@ -158,7 +158,7 @@ async function processTopic(topic) {
     console.log(`Stored URL: ${storedUrl}`);
 
     if (latest.url === storedUrl) {
-      console.log(`No change for ${topic.slug}`);
+      console.log(`No change for ${topic.slug} — skipping Discord write`);
     } else {
       console.log(`New article detected — updating Discord`);
 
@@ -187,17 +187,8 @@ async function processTopic(topic) {
       await appendToLog(topic.slug, latest.title, latest.url);
     }
 
-    // Update health on success
-    if (!articleUpdated && pinnedMessage && pinnedData) {
-      const updatedData = {
-        ...pinnedData,
-        detected_at: new Date().toISOString(),
-        status: '1',
-        last_error: '',
-      };
-      await editMessage(topic.channelId, pinnedMessage.id, toDiscordContent(updatedData));
-      console.log(`Health check updated for ${topic.slug}: status=1`);
-    } else if (!articleUpdated && !pinnedMessage) {
+    // Only create initial pinned message if none exists yet
+    if (!articleUpdated && !pinnedMessage) {
       const healthData = {
         topic: topic.slug,
         title: 'health check',
@@ -210,6 +201,18 @@ async function processTopic(topic) {
       };
       await createAndPinMessage(topic.channelId, toDiscordContent(healthData));
       console.log(`Created initial pinned message for ${topic.slug}`);
+    }
+
+    // If previous status was 0 (error), update it back to 1 now we succeeded
+    if (!articleUpdated && pinnedMessage && pinnedData && pinnedData.status === '0') {
+      const recoveredData = {
+        ...pinnedData,
+        detected_at: new Date().toISOString(),
+        status: '1',
+        last_error: '',
+      };
+      await editMessage(topic.channelId, pinnedMessage.id, toDiscordContent(recoveredData));
+      console.log(`Recovery: status updated to 1 for ${topic.slug}`);
     }
 
     return { success: true };
@@ -227,9 +230,9 @@ async function processTopic(topic) {
       console.error(`Discord API call failed. Check DISCORD_BOT_TOKEN secret.`);
     }
 
-    // Update health with error status
+    // Only update Discord with error if status wasn't already 0
     try {
-      if (pinnedMessage && pinnedData) {
+      if (pinnedMessage && pinnedData && pinnedData.status !== '0') {
         const errorData = {
           ...pinnedData,
           detected_at: new Date().toISOString(),
@@ -238,6 +241,8 @@ async function processTopic(topic) {
         };
         await editMessage(topic.channelId, pinnedMessage.id, toDiscordContent(errorData));
         console.log(`Health check updated for ${topic.slug}: status=0`);
+      } else if (pinnedMessage && pinnedData && pinnedData.status === '0') {
+        console.log(`Status already 0 for ${topic.slug} — skipping Discord write`);
       }
     } catch (healthErr) {
       console.error(`Failed to update health check for ${topic.slug}: ${healthErr.message}`);
