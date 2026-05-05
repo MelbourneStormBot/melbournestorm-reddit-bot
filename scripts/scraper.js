@@ -25,6 +25,14 @@ const path = await import('path');
 
 const LOG_FILE = path.join(process.cwd(), 'logs', 'article-history.md');
 
+function toDiscordContent(data) {
+  return '`' + JSON.stringify(data) + '`';
+}
+
+function fromDiscordContent(content) {
+  return JSON.parse(content.replace(/`/g, '').trim());
+}
+
 async function discordRequest(method, endpoint, body) {
   const response = await fetch(`${DISCORD_API}${endpoint}`, {
     method,
@@ -133,7 +141,7 @@ async function processTopic(topic) {
   try {
     pinnedMessage = await getPinnedMessage(topic.channelId);
     if (pinnedMessage) {
-      pinnedData = JSON.parse(pinnedMessage.content);
+      pinnedData = fromDiscordContent(pinnedMessage.content);
       console.log(`Found pinned message, stored URL: ${pinnedData.url}`);
     } else {
       console.log(`No pinned message found — will create one`);
@@ -166,10 +174,10 @@ async function processTopic(topic) {
       };
 
       if (pinnedMessage) {
-        await editMessage(topic.channelId, pinnedMessage.id, JSON.stringify(newData));
-        pinnedMessage = { ...pinnedMessage, content: JSON.stringify(newData) };
+        await editMessage(topic.channelId, pinnedMessage.id, toDiscordContent(newData));
+        pinnedMessage = { ...pinnedMessage, content: toDiscordContent(newData) };
       } else {
-        pinnedMessage = await createAndPinMessage(topic.channelId, JSON.stringify(newData));
+        pinnedMessage = await createAndPinMessage(topic.channelId, toDiscordContent(newData));
       }
 
       pinnedData = newData;
@@ -187,7 +195,7 @@ async function processTopic(topic) {
         status: '1',
         last_error: '',
       };
-      await editMessage(topic.channelId, pinnedMessage.id, JSON.stringify(updatedData));
+      await editMessage(topic.channelId, pinnedMessage.id, toDiscordContent(updatedData));
       console.log(`Health check updated for ${topic.slug}: status=1`);
     } else if (!articleUpdated && !pinnedMessage) {
       const healthData = {
@@ -200,7 +208,7 @@ async function processTopic(topic) {
         status: '1',
         last_error: '',
       };
-      await createAndPinMessage(topic.channelId, JSON.stringify(healthData));
+      await createAndPinMessage(topic.channelId, toDiscordContent(healthData));
       console.log(`Created initial pinned message for ${topic.slug}`);
     }
 
@@ -228,7 +236,7 @@ async function processTopic(topic) {
           status: '0',
           last_error: errorMessage,
         };
-        await editMessage(topic.channelId, pinnedMessage.id, JSON.stringify(errorData));
+        await editMessage(topic.channelId, pinnedMessage.id, toDiscordContent(errorData));
         console.log(`Health check updated for ${topic.slug}: status=0`);
       }
     } catch (healthErr) {
