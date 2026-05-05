@@ -1,13 +1,21 @@
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
 const TOPICS = [
   {
     slug: 'team-lists',
+    channelId: '1500718194137239562',
     url: 'https://www.melbournestorm.com.au/news/topic/team-lists/',
     ariaPrefix: 'Team Lists Article - ',
     flair_id: '82219f50-3670-11f1-ac72-c22170d0e125',
     flair_text: 'Team List',
+  },
+  {
+    slug: 'injuries',
+    channelId: '1501075944973008948',
+    url: 'https://www.melbournestorm.com.au/news/topic/injuries/',
+    ariaPrefix: 'Injuries Article - ',
+    flair_id: 'b44e515c-3671-11f1-a98e-de42d307c623',
+    flair_text: 'Injuries',
   },
 ];
 
@@ -36,22 +44,22 @@ async function discordRequest(method, endpoint, body) {
   return text ? JSON.parse(text) : null;
 }
 
-async function getPinnedMessage() {
-  const pins = await discordRequest('GET', `/channels/${DISCORD_CHANNEL_ID}/pins`);
+async function getPinnedMessage(channelId) {
+  const pins = await discordRequest('GET', `/channels/${channelId}/pins`);
   if (!pins || pins.length === 0) return null;
   return pins[0];
 }
 
-async function createAndPinMessage(content) {
-  const message = await discordRequest('POST', `/channels/${DISCORD_CHANNEL_ID}/messages`, {
+async function createAndPinMessage(channelId, content) {
+  const message = await discordRequest('POST', `/channels/${channelId}/messages`, {
     content,
   });
-  await discordRequest('PUT', `/channels/${DISCORD_CHANNEL_ID}/pins/${message.id}`);
+  await discordRequest('PUT', `/channels/${channelId}/pins/${message.id}`);
   return message;
 }
 
-async function editMessage(messageId, content) {
-  return await discordRequest('PATCH', `/channels/${DISCORD_CHANNEL_ID}/messages/${messageId}`, {
+async function editMessage(channelId, messageId, content) {
+  return await discordRequest('PATCH', `/channels/${channelId}/messages/${messageId}`, {
     content,
   });
 }
@@ -88,7 +96,7 @@ async function fetchLatestArticle(topic) {
   return { title, url };
 }
 
-async function appendToLog(topic, title, url) {
+async function appendToLog(slug, title, url) {
   try {
     const dir = path.dirname(LOG_FILE);
     if (!fs.existsSync(dir)) {
@@ -96,7 +104,7 @@ async function appendToLog(topic, title, url) {
     }
 
     const timestamp = new Date().toISOString();
-    const entry = `| ${timestamp} | ${topic} | ${title} | ${url} |\n`;
+    const entry = `| ${timestamp} | ${slug} | ${title} | ${url} |\n`;
 
     if (!fs.existsSync(LOG_FILE)) {
       const header = `# Melbourne Storm Article History\n\nAutomatically updated by MelbourneStormBot when new articles are detected.\n\n| Detected At | Topic | Title | URL |\n|---|---|---|---|\n`;
@@ -106,7 +114,6 @@ async function appendToLog(topic, title, url) {
     fs.appendFileSync(LOG_FILE, entry);
     console.log(`Log file updated: ${title}`);
 
-    // Signal to the workflow that a commit is needed
     const outputFile = process.env.GITHUB_OUTPUT;
     if (outputFile) {
       fs.appendFileSync(outputFile, `article_detected=true\n`);
@@ -116,18 +123,15 @@ async function appendToLog(topic, title, url) {
   }
 }
 
-async function run() {
-  console.log(`Scraper started at ${new Date().toISOString()}`);
-
-  let anyError = false;
-  let lastErrorMessage = '';
-  let articleUpdated = false;
+async function processTopic(topic) {
+  console.log(`\nChecking: ${topic.slug}`);
 
   let pinnedMessage = null;
   let pinnedData = null;
+  let articleUpdated = false;
 
   try {
-    pinnedMessage = await getPinnedMessage();
+    pinnedMessage = await getPinnedMessage(topic.channelId);
     if (pinnedMessage) {
       pinnedData = JSON.parse(pinnedMessage.content);
       console.log(`Found pinned message, stored URL: ${pinnedData.url}`);
@@ -135,24 +139,19 @@ async function run() {
       console.log(`No pinned message found — will create one`);
     }
   } catch (err) {
-    console.error(`Failed to read pinned message: ${err.message}`);
+    console.error(`Failed to read pinned message for ${topic.slug}: ${err.message}`);
   }
 
-  for (const topic of TOPICS) {
-    console.log(`\nChecking: ${topic.slug}`);
+  try {
+    const latest = await fetchLatestArticle(topic);
+    console.log(`Latest article: "${latest.title}" — ${latest.url}`);
 
-    try {
-      const latest = await fetchLatestArticle(topic);
-      console.log(`Latest article: "${latest.title}" — ${latest.url}`);
+    const storedUrl = pinnedData ? pinnedData.url : null;
+    console.log(`Stored URL: ${storedUrl}`);
 
-      const storedUrl = pinnedData ? pinnedData.url : null;
-      console.log(`Stored URL: ${storedUrl}`);
-
-      if (latest.url === storedUrl) {
-        console.log(`No change for ${topic.slug}`);
-        continue;
-      }
-
+    if (latest.url === storedUrl) {
+      console.log(`No change for ${topic.slug}`);
+    } else {
       console.log(`New article detected — updating Discord`);
 
       const newData = {
@@ -167,63 +166,90 @@ async function run() {
       };
 
       if (pinnedMessage) {
-        await editMessage(pinnedMessage.id, JSON.stringify(newData));
+        await editMessage(topic.channelId, pinnedMessage.id, JSON.stringify(newData));
         pinnedMessage = { ...pinnedMessage, content: JSON.stringify(newData) };
       } else {
-        pinnedMessage = await createAndPinMessage(JSON.stringify(newData));
+        pinnedMessage = await createAndPinMessage(topic.channelId, JSON.stringify(newData));
       }
 
       pinnedData = newData;
       articleUpdated = true;
-      console.log(`Discord updated successfully`);
+      console.log(`Discord updated successfully for ${topic.slug}`);
 
       await appendToLog(topic.slug, latest.title, latest.url);
-
-    } catch (err) {
-      anyError = true;
-      lastErrorMessage = `[${topic.slug}]: ${err.message}`;
-      console.error(`ERROR ${lastErrorMessage}`);
-
-      if (err.message.startsWith('PARSE_ERROR')) {
-        console.error(`ACTION REQUIRED: The Melbourne Storm website structure may have changed.`);
-        console.error(`Check ${topic.url} and update the scraper if needed.`);
-      } else if (err.message.startsWith('HTTP_ERROR')) {
-        console.error(`The Melbourne Storm website returned an error. May be temporary.`);
-      } else if (err.message.startsWith('DISCORD_ERROR')) {
-        console.error(`Discord API call failed. Check DISCORD_BOT_TOKEN and DISCORD_CHANNEL_ID secrets.`);
-      }
     }
-  }
 
-  if (!articleUpdated) {
+    // Update health on success
+    if (!articleUpdated && pinnedMessage && pinnedData) {
+      const updatedData = {
+        ...pinnedData,
+        detected_at: new Date().toISOString(),
+        status: '1',
+        last_error: '',
+      };
+      await editMessage(topic.channelId, pinnedMessage.id, JSON.stringify(updatedData));
+      console.log(`Health check updated for ${topic.slug}: status=1`);
+    } else if (!articleUpdated && !pinnedMessage) {
+      const healthData = {
+        topic: topic.slug,
+        title: 'health check',
+        url: 'health',
+        flair_id: topic.flair_id,
+        flair_text: topic.flair_text,
+        detected_at: new Date().toISOString(),
+        status: '1',
+        last_error: '',
+      };
+      await createAndPinMessage(topic.channelId, JSON.stringify(healthData));
+      console.log(`Created initial pinned message for ${topic.slug}`);
+    }
+
+    return { success: true };
+
+  } catch (err) {
+    const errorMessage = `[${topic.slug}]: ${err.message}`;
+    console.error(`ERROR ${errorMessage}`);
+
+    if (err.message.startsWith('PARSE_ERROR')) {
+      console.error(`ACTION REQUIRED: The Melbourne Storm website structure may have changed.`);
+      console.error(`Check ${topic.url} and update the scraper if needed.`);
+    } else if (err.message.startsWith('HTTP_ERROR')) {
+      console.error(`The Melbourne Storm website returned an error. May be temporary.`);
+    } else if (err.message.startsWith('DISCORD_ERROR')) {
+      console.error(`Discord API call failed. Check DISCORD_BOT_TOKEN secret.`);
+    }
+
+    // Update health with error status
     try {
       if (pinnedMessage && pinnedData) {
-        const updatedData = {
+        const errorData = {
           ...pinnedData,
           detected_at: new Date().toISOString(),
-          status: anyError ? '0' : '1',
-          last_error: anyError ? lastErrorMessage : '',
+          status: '0',
+          last_error: errorMessage,
         };
-        await editMessage(pinnedMessage.id, JSON.stringify(updatedData));
-        console.log(`\nHealth check updated: status=${updatedData.status}`);
-      } else {
-        const healthData = {
-          topic: '_health',
-          title: 'health check',
-          url: 'health',
-          flair_id: '',
-          flair_text: '',
-          detected_at: new Date().toISOString(),
-          status: anyError ? '0' : '1',
-          last_error: anyError ? lastErrorMessage : '',
-        };
-        pinnedMessage = await createAndPinMessage(JSON.stringify(healthData));
-        console.log(`\nCreated initial pinned message with health status`);
+        await editMessage(topic.channelId, pinnedMessage.id, JSON.stringify(errorData));
+        console.log(`Health check updated for ${topic.slug}: status=0`);
       }
-    } catch (err) {
-      console.error(`Health check update failed: ${err.message}`);
+    } catch (healthErr) {
+      console.error(`Failed to update health check for ${topic.slug}: ${healthErr.message}`);
     }
+
+    return { success: false, error: errorMessage };
   }
+}
+
+async function run() {
+  console.log(`Scraper started at ${new Date().toISOString()}`);
+
+  const results = [];
+
+  for (const topic of TOPICS) {
+    const result = await processTopic(topic);
+    results.push(result);
+  }
+
+  const anyError = results.some(r => !r.success);
 
   if (anyError) {
     console.error(`\nScraper finished WITH ERRORS`);
