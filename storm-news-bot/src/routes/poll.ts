@@ -54,12 +54,13 @@ poll.post('/poll', async (c) => {
         continue;
       }
 
-      // Strip backticks and parse JSON
       const firstPin = pins[0];
       if (!firstPin) {
         console.log(`No pinned messages found for ${channel.topic}`);
         continue;
       }
+
+      // Strip backticks and parse JSON
       const raw = firstPin.content.replace(/`/g, '').trim();
       const data = JSON.parse(raw) as {
         topic: string;
@@ -72,18 +73,35 @@ poll.post('/poll', async (c) => {
         last_error: string;
       };
 
-      // If status is 0, send modmail and stop
+      const statusKey = `lastStatus:${channel.topic}`;
+      const lastStatus = await redis.get(statusKey);
+
+      // If status is 0, only send modmail if this is a new error
       if (data.status === '0') {
-        console.error(`Scraper error for ${channel.topic}: ${data.last_error}`);
-        await reddit.sendPrivateMessage({
-          to: `/r/${SUBREDDIT}`,
-          subject: `Storm News Bot Error: ${channel.topic}`,
-          text: `The scraper reported an error for **${channel.topic}**:\n\n${data.last_error}`,
-        });
+        if (lastStatus !== '0') {
+          console.error(
+            `Scraper error for ${channel.topic}: ${data.last_error}`
+          );
+          await reddit.sendPrivateMessage({
+            to: `/r/${SUBREDDIT}`,
+            subject: `Storm News Bot Error: ${channel.topic}`,
+            text: `The scraper reported an error for **${channel.topic}**:\n\n${data.last_error}`,
+          });
+          await redis.set(statusKey, '0');
+        } else {
+          console.log(
+            `Status still 0 for ${channel.topic}, modmail already sent`
+          );
+        }
         continue;
       }
 
-      // Check KV store for last posted URL
+      // Status is 1 — update status key if it was previously 0
+      if (lastStatus !== '1') {
+        await redis.set(statusKey, '1');
+      }
+
+      // Check Redis for last posted URL
       const kvKey = `lastPostedUrl:${channel.topic}`;
       const lastPostedUrl = await redis.get(kvKey);
 
@@ -102,7 +120,7 @@ poll.post('/poll', async (c) => {
 
       console.log(`Posted new article for ${channel.topic}: ${post.id}`);
 
-      // Update KV store
+      // Update Redis with new URL
       await redis.set(kvKey, data.url);
     } catch (err) {
       console.error(`Unexpected error for ${channel.topic}:`, err);
