@@ -85,7 +85,7 @@ poll.post('/poll', async (c) => {
           await reddit.sendPrivateMessage({
             to: `/r/${SUBREDDIT}`,
             subject: `Storm News Bot Error: ${channel.topic}`,
-            text: `The scraper reported an error for **${channel.topic}**:\n\n${data.last_error}`,
+            text: `The scraper reported an error for **${channel.topic}**:\n\n\`\`\`\n${data.last_error}\n\`\`\``,
           });
           await redis.set(statusKey, '0');
         } else {
