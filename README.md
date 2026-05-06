@@ -56,6 +56,14 @@ melbournestorm-reddit-bot/
 │   └── article-history.md          # Historical record of all detected articles
 ├── scripts/
 │   └── scraper.js                  # The scraper script
+├── storm-news-bot/                 # Devvit app (posts articles to Reddit)
+│   ├── src/
+│   │   ├── routes/
+│   │   │   └── poll.ts             # Core polling logic
+│   │   └── index.ts                # Server entry point
+│   └── devvit.json                 # App config, scheduler, permissions, secrets
+├── PRIVACY.md
+├── TERMS.md
 └── README.md
 ```
 
@@ -121,7 +129,7 @@ GitHub's own scheduled workflows are unreliable on free accounts and can be dela
 
 ## Discord Setup
 
-**Server:** MelbourneStormBot's server (private, no public invite link)
+**Server:** MelbourneStormBot's server (private, invite only)
 **Bot:** MelbourneStormBot (APP)
 
 **Channels:**
@@ -202,9 +210,47 @@ Devvit polls each Discord channel on a schedule and follows this logic for each:
 1. Read the pinned message from the channel
 2. Parse the JSON
 3. Check `status` first — if `0`, send a modmail alert to r/melbournestorm mods and stop
-4. If `status` is `1`, compare the article URL to the last URL Devvit posted (stored in Devvit's KV store)
+4. If `status` is `1`, compare the article URL to the last URL Devvit posted (stored in Devvit's Redis store)
 5. If the URL is new — create a Reddit link post with the article title and URL, apply the flair
 6. If the URL is the same — do nothing
+
+---
+
+## Devvit App Setup
+
+The Devvit app lives in the `storm-news-bot/` folder. It is published on Reddit's developer platform as `storm-news-bot` under the `u/MelbourneStormBot` account.
+
+**App page:** https://developers.reddit.com/apps/storm-news-bot
+
+**To install or reinstall the app on r/melbournestorm:**
+1. Log into Reddit as u/MelbourneStormBot
+2. Go to https://developers.reddit.com/apps/storm-news-bot
+3. Click **Add to community** and select r/melbournestorm
+
+**To set the Discord bot token secret:**
+```bash
+cd storm-news-bot
+npx devvit settings set DISCORD_BOT_TOKEN
+```
+
+**To publish a new version after making code changes:**
+```bash
+cd storm-news-bot
+nvm use 22
+npx devvit publish
+npx devvit install melbournestorm
+```
+
+**Scheduler:** The app runs on two schedules defined in `devvit.json`:
+- Every minute all day Tuesday (UTC) — covers Tuesday 4pm AEST/AEDT team list window
+- Every 30 minutes all other days
+
+**Devvit Redis keys used:**
+
+| Key | Purpose |
+|---|---|
+| `lastPostedUrl:team-lists` | Last article URL posted for team lists |
+| `lastPostedUrl:injuries` | Last article URL posted for injuries |
 
 ---
 
@@ -239,10 +285,26 @@ To find the correct `ariaPrefix`:
 4. The prefix is everything before the article title — e.g. `"Club News Article - "` or `"Club News Video - "`
 5. Always use `Article - ` not `Video - ` to avoid linking to video pages
 
-That is the only code change needed. Nothing else in the script requires modification.
-
 **Step 3: Update the Devvit app**
-- The Devvit app also needs to be updated to poll the new channel — see the Devvit section of this README when that is documented.
+
+Open `storm-news-bot/src/routes/poll.ts` and add a new entry to the `CHANNELS` array:
+
+```typescript
+{
+  id: 'YOUR_NEW_CHANNEL_ID',
+  topic: 'club-news',
+  flairId: 'bfedceda-3670-11f1-98fa-42b0121679c6',
+},
+```
+
+Then publish the updated app:
+
+```bash
+cd storm-news-bot
+nvm use 22
+npx devvit publish
+npx devvit install melbournestorm
+```
 
 **Known flair IDs:**
 
@@ -279,6 +341,11 @@ The scraper could not find an article card with the expected `aria-label` format
 
 **`DISCORD_ERROR`**
 The scraper could not read from or write to Discord. Check that the `DISCORD_BOT_TOKEN` secret in GitHub is correct. The bot token may need to be regenerated in the Discord Developer Portal.
+
+**Devvit app not posting**
+1. Check the Devvit app is installed on r/melbournestorm at https://developers.reddit.com/apps/storm-news-bot
+2. Confirm the `DISCORD_BOT_TOKEN` secret is set by running `npx devvit settings set DISCORD_BOT_TOKEN` from the `storm-news-bot` folder
+3. Check that u/MelbourneStormBot is still a moderator on r/melbournestorm
 
 **cron-job.org job disabled**
 If cron-job.org disables a job after repeated failures, log in at https://cron-job.org and re-enable it. Check the job execution history to find out why it failed — usually an expired GitHub token.
