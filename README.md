@@ -197,7 +197,7 @@ Every time a new article is detected, the scraper appends a record to `logs/arti
 3. It reads the current pinned message from that topic's Discord channel
 4. It finds the latest article using the `aria-label` attribute on article cards
 5. It compares the latest URL to the URL stored in the pinned message
-6. If the URLs match — no change, script updates the health timestamp only
+6. If the URLs match — no change, script does nothing.
 7. If the URLs differ — new article detected, script edits the pinned message and appends to the article history log
 8. The workflow commits the updated log file back to the repository
 
