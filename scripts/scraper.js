@@ -141,6 +141,7 @@ async function processTopic(topic) {
   try {
     pinnedMessage = await getPinnedMessage(topic.channelId);
     if (pinnedMessage) {
+      console.log(`Raw pin content: ${pinnedMessage.content}`);
       pinnedData = fromDiscordContent(pinnedMessage.content);
       console.log(`Found pinned message, stored URL: ${pinnedData.url}`);
     } else {
