@@ -95,7 +95,13 @@ async function fetchLatestArticle(topic) {
     throw new Error(`PARSE_ERROR:Could not find article card with aria-label prefix "${topic.ariaPrefix}" — page structure may have changed`);
   }
 
-  const title = match[1].trim();
+  const title = match[1].trim()
+  .replace(/&#39;/g, "'")
+  .replace(/&#8217;/g, "'")
+  .replace(/&amp;/g, '&')
+  .replace(/&quot;/g, '"')
+  .replace(/&lt;/g, '<')
+  .replace(/&gt;/g, '>');
   const path2 = match[2].trim();
   const url = path2.startsWith('http')
     ? path2
