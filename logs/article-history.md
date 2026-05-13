@@ -15,3 +15,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-05-10T02:37:15.032Z | team-lists | Late Mail: Round 10 v Tigers | https://www.melbournestorm.com.au/news/2026/05/10/late-mail-round-10-v-tigers/ |
 | 2026-05-11T01:07:16.540Z | injuries | Injury Update: Sua Fa&#39;alogo | https://www.melbournestorm.com.au/news/2026/05/11/injury-update-sua-faalogo/ |
 | 2026-05-12T06:00:37.007Z | team-lists | Team Announcement: Round 11 v Eels | https://www.melbournestorm.com.au/news/2026/05/12/team-announcement-round-11-v-eels/ |
+| 2026-05-13T07:37:19.282Z | injuries | Frank Ponissi Injury Update: Round 11 | https://www.melbournestorm.com.au/news/2026/05/13/frank-ponissi-injury-update-round-11/ |
