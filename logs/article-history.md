@@ -21,3 +21,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-05-19T06:00:30.893Z | team-lists | Team Announcement: Round 12 v Bulldogs | https://www.melbournestorm.com.au/news/2026/05/19/team-announcement-round-12-v-bulldogs/ |
 | 2026-05-21T10:07:18.707Z | team-lists | Team Update: Round 12 v Bulldogs | https://www.melbournestorm.com.au/news/2026/05/21/team-update-round-12-v-bulldogs/ |
 | 2026-05-22T08:37:13.710Z | team-lists | Late Mail: Round 12 v Bulldogs | https://www.melbournestorm.com.au/news/2026/05/22/late-mail-round-12-v-bulldogs/ |
+| 2026-05-26T06:00:31.868Z | team-lists | Team Announcement: Round 13 v Roosters | https://www.melbournestorm.com.au/news/2026/05/26/team-announcement-round-13-v-roosters/ |
