@@ -26,3 +26,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-05-30T08:07:14.329Z | team-lists | Late Mail: Round 13 v Roosters | https://www.melbournestorm.com.au/news/2026/05/30/late-mail-round-13-v-roosters/ |
 | 2026-06-02T06:00:31.257Z | team-lists | Team Announcement: Round 14 v Knights | https://www.melbournestorm.com.au/news/2026/06/02/team-announcement-round-14-v-knights/ |
 | 2026-06-04T08:07:18.827Z | team-lists | Team Update: Round 14 v Knights | https://www.melbournestorm.com.au/news/2026/06/04/team-update-round-14-v-knights/ |
+| 2026-06-05T06:37:16.942Z | team-lists | Late Mail: Round 14 v Knights | https://www.melbournestorm.com.au/news/2026/06/05/late-mail-round-14-v-knights/ |
