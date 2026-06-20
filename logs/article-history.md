@@ -29,3 +29,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-06-05T06:37:16.942Z | team-lists | Late Mail: Round 14 v Knights | https://www.melbournestorm.com.au/news/2026/06/05/late-mail-round-14-v-knights/ |
 | 2026-06-05T10:07:16.448Z | injuries | Xavier Coates Injury Update | https://www.melbournestorm.com.au/news/2026/06/05/xavier-coates-injury-update/ |
 | 2026-06-16T06:00:52.592Z | team-lists | Team Announcement: Round 16 v Raiders | https://www.melbournestorm.com.au/news/2026/06/16/team-announcement-round-16-v-raiders/ |
+| 2026-06-20T06:07:15.911Z | team-lists | Team Update: Round 16 v Raiders | https://www.melbournestorm.com.au/news/2026/06/20/team-update-round-16-v-raiders/ |
