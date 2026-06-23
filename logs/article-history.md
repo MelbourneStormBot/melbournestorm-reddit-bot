@@ -31,3 +31,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-06-16T06:00:52.592Z | team-lists | Team Announcement: Round 16 v Raiders | https://www.melbournestorm.com.au/news/2026/06/16/team-announcement-round-16-v-raiders/ |
 | 2026-06-20T06:07:15.911Z | team-lists | Team Update: Round 16 v Raiders | https://www.melbournestorm.com.au/news/2026/06/20/team-update-round-16-v-raiders/ |
 | 2026-06-21T04:37:16.978Z | team-lists | Late Mail: Round 16 v Raiders | https://www.melbournestorm.com.au/news/2026/06/21/late-mail-round-16-v-raiders/ |
+| 2026-06-23T06:00:47.066Z | team-lists | Team Announcement: Round 17 v Manly | https://www.melbournestorm.com.au/news/2026/06/23/team-announcement-round-17-v-manly/ |
