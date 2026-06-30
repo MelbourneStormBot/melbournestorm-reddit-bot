@@ -34,3 +34,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-06-23T06:00:47.066Z | team-lists | Team Announcement: Round 17 v Manly | https://www.melbournestorm.com.au/news/2026/06/23/team-announcement-round-17-v-manly/ |
 | 2026-06-26T09:37:18.790Z | team-lists | Team Update: Round 17 v Manly | https://www.melbournestorm.com.au/news/2026/06/26/team-update-round-17-v-manly/ |
 | 2026-06-27T08:19:38.750Z | team-lists | Late Mail: Round 17 v Manly | https://www.melbournestorm.com.au/news/2026/06/27/late-mail-round-17-v-manly/ |
+| 2026-06-30T23:23:32.235Z | injuries | Injury Update: Ativalu Lisati | https://www.melbournestorm.com.au/news/2026/07/01/injury-update-ativalu-lisati/ |
