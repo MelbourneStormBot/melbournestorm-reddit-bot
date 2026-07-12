@@ -37,3 +37,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-06-30T23:23:32.235Z | injuries | Injury Update: Ativalu Lisati | https://www.melbournestorm.com.au/news/2026/07/01/injury-update-ativalu-lisati/ |
 | 2026-07-07T06:09:18.695Z | team-lists | Team Announcement: Round 19 v Titans | https://www.melbournestorm.com.au/news/2026/07/07/team-announcement-round-19-v-titans/ |
 | 2026-07-11T09:37:14.496Z | team-lists | Team Update: Round 19 v Titans | https://www.melbournestorm.com.au/news/2026/07/11/team-update-round-19-v-titans/ |
+| 2026-07-12T07:07:20.162Z | team-lists | Late Mail: Round 19 v Titans | https://www.melbournestorm.com.au/news/2026/07/12/late-mail-round-19-v-titans/ |
