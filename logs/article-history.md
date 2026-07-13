@@ -38,3 +38,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-07-07T06:09:18.695Z | team-lists | Team Announcement: Round 19 v Titans | https://www.melbournestorm.com.au/news/2026/07/07/team-announcement-round-19-v-titans/ |
 | 2026-07-11T09:37:14.496Z | team-lists | Team Update: Round 19 v Titans | https://www.melbournestorm.com.au/news/2026/07/11/team-update-round-19-v-titans/ |
 | 2026-07-12T07:07:20.162Z | team-lists | Late Mail: Round 19 v Titans | https://www.melbournestorm.com.au/news/2026/07/12/late-mail-round-19-v-titans/ |
+| 2026-07-13T21:07:19.680Z | injuries | Injury Update: Cameron Munster | https://www.melbournestorm.com.au/news/2026/07/14/injury-update-cameron-munster/ |
