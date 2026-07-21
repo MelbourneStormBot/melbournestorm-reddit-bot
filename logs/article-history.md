@@ -43,3 +43,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-07-16T10:07:15.976Z | team-lists | Team Update: Round 20 v Roosters | https://www.melbournestorm.com.au/news/2026/07/16/team-update-round-20-v-roosters/ |
 | 2026-07-17T08:37:15.212Z | team-lists | Late Mail: Round 20 v Roosters | https://www.melbournestorm.com.au/news/2026/07/17/late-mail-round-20-v-roosters/ |
 | 2026-07-18T05:07:19.542Z | injuries | Injury Update: Will Warbrick | https://www.melbournestorm.com.au/news/2026/07/18/injury-update-will-warbrick/ |
+| 2026-07-21T06:00:54.427Z | team-lists | Team Announcement: Round 21 v Rabbitohs | https://www.melbournestorm.com.au/news/2026/07/21/team-announcement-round-21-v-rabbitohs/ |
