@@ -50,3 +50,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-07-28T06:00:55.889Z | team-lists | Team Announcement: Round 22 v Bulldogs | https://www.melbournestorm.com.au/news/2026/07/28/team-announcement-round-22-v-bulldogs/ |
 | 2026-07-30T10:07:16.599Z | team-lists | Team Update: Round 22 v Bulldogs | https://www.melbournestorm.com.au/news/2026/07/30/team-update-round-22-v-bulldogs/ |
 | 2026-07-31T08:37:17.925Z | team-lists | Late Mail: Round 22 v Bulldogs | https://www.melbournestorm.com.au/news/2026/07/31/late-mail-round-22-v-bulldogs/ |
+| 2026-08-04T06:00:53.286Z | team-lists | Team Announcement: Round 23 v Manly | https://www.melbournestorm.com.au/news/2026/08/04/team-announcement-round-23-v-manly/ |
