@@ -53,3 +53,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-08-04T06:00:53.286Z | team-lists | Team Announcement: Round 23 v Manly | https://www.melbournestorm.com.au/news/2026/08/04/team-announcement-round-23-v-manly/ |
 | 2026-08-07T05:07:20.215Z | team-lists | Team Update: Round 23 v Manly | https://www.melbournestorm.com.au/news/2026/08/07/team-update-round-23-v-manly/ |
 | 2026-08-08T03:37:21.086Z | team-lists | Late Mail: Round 23 v Manly | https://www.melbournestorm.com.au/news/2026/08/08/late-mail-round-23-v-manly/ |
+| 2026-08-18T06:01:20.796Z | team-lists | Team Announcement: Round 25 v Panthers | https://www.melbournestorm.com.au/news/2026/08/18/team-announcement-round-25-v-panthers/ |
