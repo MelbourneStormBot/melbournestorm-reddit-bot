@@ -59,3 +59,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-08-21T12:07:31.073Z | injuries | Injury Update: Harry Grant | https://www.melbournestorm.com.au/news/2026/07/25/injury-update-harry-grant/ |
 | 2026-08-25T06:00:42.906Z | team-lists | Team Announcement: Round 26 v Broncos | https://www.melbournestorm.com.au/news/2026/08/25/team-announcement-round-26-v-broncos/ |
 | 2026-08-26T09:52:42.924Z | team-lists | Team Update: Round 26 v Broncos | https://www.melbournestorm.com.au/news/2026/08/26/team-update-round-26-v-broncos/ |
+| 2026-08-27T08:37:19.254Z | team-lists | Late Mail: Round 26 v Broncos | https://www.melbournestorm.com.au/news/2026/08/27/late-mail-round-26-v-broncos/ |
