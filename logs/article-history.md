@@ -61,3 +61,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-08-26T09:52:42.924Z | team-lists | Team Update: Round 26 v Broncos | https://www.melbournestorm.com.au/news/2026/08/26/team-update-round-26-v-broncos/ |
 | 2026-08-27T08:37:19.254Z | team-lists | Late Mail: Round 26 v Broncos | https://www.melbournestorm.com.au/news/2026/08/27/late-mail-round-26-v-broncos/ |
 | 2026-09-01T06:01:15.832Z | team-lists | Team Announcement: Round 27 v Sharks | https://www.melbournestorm.com.au/news/2026/09/01/team-announcement-round-27-v-sharks/ |
+| 2026-09-04T09:37:18.537Z | team-lists | Team Update: Round 27 v Sharks | https://www.melbournestorm.com.au/news/2026/09/04/team-update-round-27-v-sharks/ |
