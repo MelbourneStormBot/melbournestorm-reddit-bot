@@ -67,3 +67,4 @@ Automatically updated by MelbourneStormBot when new articles are detected.
 | 2026-10-01T18:37:20.539Z | injuries | Injury Update: Siulagi Tuimalatu-Brown | https://www.melbournestorm.com.au/news/2026/09/06/injury-update-siulagi-tuimalatu-brown/ |
 | 2026-10-01T19:07:25.300Z | team-lists | Late Mail: Round 27 v Sharks | https://www.melbournestorm.com.au/news/2026/09/05/late-mail-round-27-v-sharks/ |
 | 2026-10-16T11:07:24.402Z | team-lists | Late Mail: Round 27 v Sharks | https://www.melbournestorm.com.au/news/2026/09/05/late-mail-round-27-v-sharks/ |
+| 2026-10-18T03:22:39.749Z | injuries | Injury Update: Siulagi Tuimalatu-Brown | https://www.melbournestorm.com.au/news/2026/09/06/injury-update-siulagi-tuimalatu-brown/ |
